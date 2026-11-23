@@ -82,7 +82,7 @@ WantedBy=multi-user.target
 UNIT
 
 # ---- helper commands (shared by all apps in this container) ----
-cat > /usr/local/bin/update <<'UPD'
+cat > /usr/local/bin/update.new <<'UPD'
 #!/usr/bin/env bash
 # Updates every *-oefenen app in this container from GitHub. Scores and accounts are kept.
 set -e
@@ -94,7 +94,7 @@ for d in /opt/*-oefenen; do
   bash "$d/deploy/setup.sh"
 done
 UPD
-cat > /usr/local/bin/backup <<'BAK'
+cat > /usr/local/bin/backup.new <<'BAK'
 #!/usr/bin/env bash
 # Copies every app's database to /root (safe while running).
 set -e
@@ -104,7 +104,13 @@ for db in /var/lib/*-oefenen/*.db; do
   echo "Backup: $out"
 done
 BAK
-chmod +x /usr/local/bin/update /usr/local/bin/backup
+chmod +x /usr/local/bin/update.new /usr/local/bin/backup.new
+# replace atomically: 'update' may be running this very script
+mv -f /usr/local/bin/update.new /usr/local/bin/update
+mv -f /usr/local/bin/backup.new /usr/local/bin/backup
+# 'pct exec' uses a short PATH without /usr/local/bin, so also link them into /usr/sbin
+ln -sf /usr/local/bin/update /usr/sbin/update
+ln -sf /usr/local/bin/backup /usr/sbin/backup
 
 systemctl daemon-reload
 systemctl enable "$APP" >/dev/null 2>&1
